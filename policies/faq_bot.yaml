@@ -1,0 +1,8 @@
+feature_name: faq_bot
+similarity_threshold: 0.92
+ttl_seconds: 3600
+cache_enabled: true
+tags: []
+user_scoped: false
+judge_required_above: 0.85
+disable_for_tags: []
