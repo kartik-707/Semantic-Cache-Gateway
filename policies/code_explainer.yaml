@@ -1,0 +1,8 @@
+feature_name: code_explainer
+similarity_threshold: 0.95    # code semantics are precise — near-duplicates only
+ttl_seconds: 7200              # code explanations stay valid longer than FAQ answers
+cache_enabled: true
+tags: []
+user_scoped: false
+judge_required_above: 0.90
+disable_for_tags: []

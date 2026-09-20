@@ -1,0 +1,8 @@
+feature_name: personal_account_assistant
+similarity_threshold: 0.90
+ttl_seconds: 600
+cache_enabled: true
+tags: ["user_specific"]
+user_scoped: true               # cross-user leakage prevention — never share across users
+judge_required_above: 0.85
+disable_for_tags: ["legal_sensitive"]

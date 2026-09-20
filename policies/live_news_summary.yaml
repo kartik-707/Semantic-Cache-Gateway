@@ -1,0 +1,8 @@
+feature_name: live_news_summary
+similarity_threshold: 0.97    # news wording is close but meaning drifts fast — be strict
+ttl_seconds: 300               # 5 min — stale news is worse than a cache miss
+cache_enabled: true
+tags: ["current_events"]
+user_scoped: false
+judge_required_above: 0.93
+disable_for_tags: ["current_events"]   # this feature's own output shouldn't be cached at all
