@@ -1,1 +1,1 @@
-from gateway.proxy import app
+"""Gateway package."""

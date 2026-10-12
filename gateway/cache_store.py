@@ -1,29 +1,54 @@
-import os
-import json
-import hashlib
-import redis.asyncio as aioredis
-from dotenv import load_dotenv
-from contracts.proxy import ProxyRequest
+import math
+from datetime import datetime, timezone
 
-load_dotenv()
+from redis.asyncio import Redis
 
-redis_client = aioredis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    decode_responses=True,
-)
+from contracts.cache import CacheEntry
+from gateway.cache_rules import CacheContext
 
-def make_exact_key(request: ProxyRequest) -> str:
-    raw = f"{request.model}:{request.feature_name}:{request.messages[-1].content.strip().lower()}"
-    return "exact:" + hashlib.sha256(raw.encode()).hexdigest()
 
-async def get_exact(request: ProxyRequest):
-    key = make_exact_key(request)
-    cached = await redis_client.get(key)
-    if cached:
-        return json.loads(cached)
-    return None
+def expires_at(entry: CacheEntry) -> float:
+    created = entry.created_at
 
-async def set_exact(request: ProxyRequest, response: dict, ttl: int):
-    key = make_exact_key(request)
-    await redis_client.setex(key, ttl, json.dumps(response))    
+    # Existing CacheEntry uses datetime.utcnow(), which is timezone-naive.
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+
+    return created.timestamp() + entry.ttl_seconds
+
+
+async def get_exact(
+    redis_client: Redis,
+    context: CacheContext,
+) -> CacheEntry | None:
+    raw = await redis_client.get(context.exact_key)
+
+    if raw is None:
+        return None
+
+    entry = CacheEntry.model_validate_json(raw)
+
+    if expires_at(entry) <= datetime.now(timezone.utc).timestamp():
+        return None
+
+    return entry
+
+
+async def set_exact(
+    redis_client: Redis,
+    context: CacheContext,
+    entry: CacheEntry,
+) -> None:
+    remaining = (
+        expires_at(entry)
+        - datetime.now(timezone.utc).timestamp()
+    )
+
+    if remaining <= 0:
+        return
+
+    await redis_client.set(
+        context.exact_key,
+        entry.model_dump_json(),
+        ex=max(1, math.ceil(remaining)),
+    )
